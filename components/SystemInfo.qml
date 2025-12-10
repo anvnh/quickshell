@@ -12,6 +12,7 @@ Item {
     property int memUsage: 0
     property int diskUsage: 0
     property int volumeLevel: 0
+    property int brightnessVal: 0
     property string activeWindow: "Window"
     property string currentLayout: "Tile"
 
@@ -47,6 +48,10 @@ Item {
         }
     }
 
+    function refreshBrightness() {
+        lightProc.running = true
+    }
+
     // This block runs once when the component has finished loading
     Component.onCompleted: {
         // Start the 'ready' timer. For the first 100ms, volume changes won't show the OSD.
@@ -58,6 +63,7 @@ Item {
         memProc.running = true
         diskProc.running = true
         volProc.running = true
+        lightProc.running = true
         windowProc.running = true
         layoutProc.running = true
     }
@@ -149,6 +155,23 @@ Item {
         }
     }
 
+    // Brightness level
+    Process {
+        id: lightProc
+        command: ["brightnessctl", "-m"]
+        stdout: SplitParser {
+            onRead: data => {
+                if (!data) return
+                // format: name,class,current,percentage,max
+                var parts = data.trim().split(',')
+                if (parts.length >= 4) {
+                    var percentStr = parts[3]
+                    brightnessVal = parseInt(percentStr.replace('%', '')) || 0
+                }
+            }
+        }
+    }
+
     // Active window title
     Process {
         id: windowProc
@@ -186,6 +209,7 @@ Item {
             cpuProc.running = true
             memProc.running = true
             diskProc.running = true
+            lightProc.running = true
         }
     }
 

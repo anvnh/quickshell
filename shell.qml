@@ -12,14 +12,16 @@ ShellRoot {
         id: sysInfo
     }
 
+    // Top bar
     Variants {
         model: Quickshell.screens
 
         Component.TopBar {
-            // Pass the systemInfo object to the top bar
             systemInfo: sysInfo
         }
     }
+
+    // Volume OSD popup
     Variants {
         model: Quickshell.screens
 

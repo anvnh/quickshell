@@ -207,6 +207,41 @@ PanelWindow {
                 color: Theme.colMuted
             }
 
+            Text {
+                text: "\uf185 " + (systemInfo ? systemInfo.brightnessVal : 0) + "%"
+                color: Theme.colYellow
+                font.pixelSize: Theme.fontSize
+                font.family: Theme.fontFamily
+                font.bold: true
+                Layout.rightMargin: 8
+
+                MouseArea {
+                    anchors.fill: parent
+                    onWheel: (wheel) => {
+                        if (wheel.angleDelta.y > 0) {
+                            Hyprland.dispatch("exec brightnessctl set 5%+")
+                        } else {
+                            Hyprland.dispatch("exec brightnessctl set 5%-")
+                        }
+                        refreshTimer.restart()
+                    }
+                }
+
+                Timer {
+                    id: refreshTimer
+                    interval: 100
+                    onTriggered: if (systemInfo) systemInfo.refreshBrightness()
+                }
+            }
+
+            Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 16
+                Layout.alignment: Qt.AlignVCenter
+                Layout.rightMargin: 8
+                color: Theme.colMuted
+            }
+
             // Clock
             Text {
                 id: clockText

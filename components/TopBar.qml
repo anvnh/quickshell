@@ -3,11 +3,20 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import QtQuick.Controls
 
 import "../theme.js" as Theme
 
 PanelWindow {
+    id: barWindow
     property var systemInfo: null // Will be passed from shell.qml
+
+    property var audioIcons: [
+        "\ueee8", // Muted
+        "\uf026", // Low volume
+        "\uf027", // Medium volume
+        "\uf028"  // High volume
+    ]
 
     screen: modelData
     implicitHeight: 30
@@ -27,15 +36,45 @@ PanelWindow {
     }
 
     Rectangle {
+        id: backgroundRect
         anchors.fill: parent
         color: Theme.colBg
+
+        // Date and Clock
+        Text {
+            id: clockText
+            text: Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
+            color: Theme.colCyan
+            anchors.centerIn: parent
+            font.pixelSize: Theme.fontSize
+            font.family: Theme.fontFamily
+            font.bold: true
+            Layout.rightMargin: 8
+            Timer {
+                interval: 1000
+                running: true
+                repeat: true
+                onTriggered: clockText.text = Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
+            }
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: {
+                    if (systemInfo) {
+                        systemInfo.keepCalendarOpen()
+                    }
+                }
+                onExited: {
+                    if (systemInfo) {
+                        systemInfo.closeCalendarDelayed()
+                    }
+                }
+            }
+        }
 
         RowLayout {
             anchors.fill: parent
             spacing: 0
-
-            // First space
-            Item { width: 8 }
 
             // Workspaces
             Repeater {
@@ -86,7 +125,23 @@ PanelWindow {
 
             // Current Layout
             Text {
-                text: systemInfo ? systemInfo.currentLayout : "..."
+                // text: systemInfo ? systemInfo.currentLayout : "..."
+                text: {
+                    if(systemInfo) {
+                        switch(systemInfo.currentLayout) {
+                            case "Tiled":
+                            return "Tiled"
+                            case "Floating":
+                            return "Floating"
+                            case "Fullscreen":
+                            return "Fullscreen"
+                            default:
+                            return systemInfo.currentLayout
+                        }
+                    } else {
+                        return "..."
+                    }
+                }
                 color: Theme.colFg
                 font.pixelSize: Theme.fontSize
                 font.family: Theme.fontFamily
@@ -100,7 +155,7 @@ PanelWindow {
                 Layout.preferredWidth: 1
                 Layout.preferredHeight: 16
                 Layout.alignment: Qt.AlignVCenter
-                Layout.leftMargin: 2
+                Layout.leftMargin: 8
                 Layout.rightMargin: 8
                 color: Theme.colMuted
             }
@@ -120,7 +175,7 @@ PanelWindow {
 
             // Kernel Version
             Text {
-                text: "Kernel: " + (systemInfo ? systemInfo.kernelVersion : "...")
+                text: "\uf17c " + (systemInfo ? systemInfo.kernelVersion : "...")
                 color: Theme.colRed
                 font.pixelSize: Theme.fontSize
                 font.family: Theme.fontFamily
@@ -138,9 +193,9 @@ PanelWindow {
                 color: Theme.colMuted
             }
 
-            // System Stats
+            // CPU Usage
             Text {
-                text: "CPU: " + (systemInfo ? systemInfo.cpuUsage : 0) + "%"
+                text: "\uf4bc " + (systemInfo ? systemInfo.cpuUsage : 0) + "%"
                 color: Theme.colYellow
                 font.pixelSize: Theme.fontSize
                 font.family: Theme.fontFamily
@@ -156,8 +211,9 @@ PanelWindow {
                 color: Theme.colMuted
             }
 
+            // Memory Usage
             Text {
-                text: "Mem: " + (systemInfo ? systemInfo.memUsage : 0) + "%"
+                text: "\uf2db " + (systemInfo ? systemInfo.memUsage : 0) + "%"
                 color: Theme.colCyan
                 font.pixelSize: Theme.fontSize
                 font.family: Theme.fontFamily
@@ -173,8 +229,9 @@ PanelWindow {
                 color: Theme.colMuted
             }
 
+            // Disk Usage
             Text {
-                text: "Disk: " + (systemInfo ? systemInfo.diskUsage : 0) + "%"
+                text: "\udb80\udeca " + (systemInfo ? systemInfo.diskUsage : 0) + "%"
                 color: Theme.colBlue
                 font.pixelSize: Theme.fontSize
                 font.family: Theme.fontFamily
@@ -191,7 +248,22 @@ PanelWindow {
             }
 
             Text {
-                text: "Vol: " + (systemInfo ? systemInfo.volumeLevel : 0) + "%"
+                text: {
+                    if(systemInfo) {
+                        var vol = systemInfo.volumeLevel
+                        if(vol == 0) {
+                            return audioIcons[0] + "  0%"
+                        } else if(vol > 0 && vol <= 33) {
+                            return audioIcons[1] + "  " + vol + "%"
+                        } else if(vol > 33 && vol <= 66) {
+                            return audioIcons[2] + "  " + vol + "%"
+                        } else if(vol > 66) {
+                            return audioIcons[3] + "  " + vol + "%"
+                        }
+                    } else {
+                        return "\uf028 ...%"
+                    }
+                }
                 color: Theme.colPurple
                 font.pixelSize: Theme.fontSize
                 font.family: Theme.fontFamily
@@ -233,34 +305,6 @@ PanelWindow {
                     onTriggered: if (systemInfo) systemInfo.refreshBrightness()
                 }
             }
-
-            Rectangle {
-                Layout.preferredWidth: 1
-                Layout.preferredHeight: 16
-                Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: 8
-                color: Theme.colMuted
-            }
-
-            // Clock
-            Text {
-                id: clockText
-                text: Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
-                color: Theme.colCyan
-                font.pixelSize: Theme.fontSize
-                font.family: Theme.fontFamily
-                font.bold: true
-                Layout.rightMargin: 8
-
-                Timer {
-                    interval: 1000
-                    running: true
-                    repeat: true
-                    onTriggered: clockText.text = Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
-                }
-            }
-
-            Item { width: 8 }
         }
     }
 }

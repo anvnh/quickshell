@@ -1,11 +1,11 @@
-const colBg = "#1a1b26";
-const colFg = "#a9b1d6";
-const colMuted = "#444b6a";
-const colCyan = "#0db9d7";
-const colPurple = "#ad8ee6";
-const colRed = "#f7768e";
-const colYellow = "#e0af68";
-const colBlue = "#7aa2f7";
+const colBg = "#1e1e2e";     // Base
+const colFg = "#cdd6f4";     // Text
+const colMuted = "#45475a";  // Surface 1
+const colCyan = "#89dceb";   // Sky
+const colPurple = "#cba6f7"; // Mauve
+const colRed = "#f38ba8";    // Red
+const colYellow = "#f9e2af"; // Yellow
+const colBlue = "#89b4fa";   // Blue
 
 const fontFamily = "JetBrainsMono Nerd Font";
-const fontSize = 14;
+const fontSize = 13;

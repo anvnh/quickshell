@@ -31,4 +31,14 @@ ShellRoot {
             volumeLevel: sysInfo.volumeLevel
         }
     }
+
+    // Calendar Popup
+    Variants {
+        model: Quickshell.screens
+
+        Popup.CalendarPopup {
+            visible: sysInfo.calendarVisible
+            systemInfo: sysInfo
+        }
+    }
 }

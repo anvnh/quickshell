@@ -22,6 +22,7 @@ Item {
 
     // OSD Logic
     property bool osdVisible: false
+    property bool calendarVisible: false
     property bool isReady: false // Flag to prevent OSD on startup
 
     // Timer to mark the system as "ready" after a short delay
@@ -198,6 +199,25 @@ Item {
                 }
             }
         }
+    }
+
+    // Timer for display calendar popup
+    Timer {
+        id: calendarTimer
+        interval: 100 // ms
+        repeat: false
+        onTriggered: {
+            systemInfo.calendarVisible = false
+        }
+    }
+
+    function keepCalendarOpen() {
+        calendarTimer.stop()
+        calendarVisible = true
+    }
+
+    function closeCalendarDelayed() {
+        calendarTimer.restart()
     }
 
     // Slow timer for system stats

@@ -18,6 +18,14 @@ PanelWindow {
         "\uf028"  // High volume
     ]
 
+    property var batteryIcons: [
+        "\uf244", // Empty 
+        "\uf243", // Low 
+        "\uf242", // Medium 
+        "\uf241", // High 
+        "\uf240"  // Full 
+    ]
+
     screen: modelData
     implicitHeight: 30
     color: Theme.colBg
@@ -279,6 +287,7 @@ PanelWindow {
                 color: Theme.colMuted
             }
 
+            // Brightness
             Text {
                 text: "\uf185 " + (systemInfo ? systemInfo.brightnessVal : 0) + "%"
                 color: Theme.colYellow
@@ -305,6 +314,53 @@ PanelWindow {
                     onTriggered: if (systemInfo) systemInfo.refreshBrightness()
                 }
             }
+
+            Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 16
+                Layout.alignment: Qt.AlignVCenter
+                Layout.rightMargin: 8
+                color: Theme.colMuted
+            }
+
+            Text {
+                id: batteryText
+                text: {
+                    if (systemInfo) {
+                        var level = systemInfo.batteryLevel || 0
+                        var isCharging = systemInfo.isCharging || false
+
+                        var icon = ""
+                        if (isCharging) {
+                            icon = "\uf0e7" // Lightning bolt 
+                        } else {
+                            if (level <= 10) icon = batteryIcons[0]
+                            else if (level <= 35) icon = batteryIcons[1]
+                            else if (level <= 60) icon = batteryIcons[2]
+                            else if (level <= 85) icon = batteryIcons[3]
+                            else icon = batteryIcons[4]
+                        }
+                        return icon + "  " + level + "%"
+                    } else {
+                        return "\uf244 ..."
+                    }
+                }
+
+                // Logic màu sắc: Xanh khi sạc/đầy, Đỏ khi thấp
+                color: {
+                    if (systemInfo) {
+                        if (systemInfo.isCharging) return Theme.colGreen
+                        if (systemInfo.batteryLevel <= 20) return Theme.colRed
+                    }
+                    return Theme.colFg
+                }
+
+                font.pixelSize: Theme.fontSize
+                font.family: Theme.fontFamily
+                font.bold: true
+                Layout.rightMargin: 8
+            }
+
         }
     }
 }

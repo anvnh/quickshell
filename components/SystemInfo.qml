@@ -20,6 +20,10 @@ Item {
     property var lastCpuIdle: 0
     property var lastCpuTotal: 0
 
+    // Battery properties
+    property int batteryLevel: 0
+    property bool isCharging: false
+
     // OSD Logic
     property bool osdVisible: false
     property bool calendarVisible: false
@@ -64,6 +68,7 @@ Item {
         memProc.running = true
         diskProc.running = true
         volProc.running = true
+        batProc.running = true
         lightProc.running = true
         windowProc.running = true
         layoutProc.running = true
@@ -173,6 +178,21 @@ Item {
         }
     }
 
+    Process {
+        id: batProc
+        command: ["sh", "-c", "paste -d ' ' /sys/class/power_supply/BAT0/capacity /sys/class/power_supply/BAT0/status"]
+        stdout: SplitParser {
+            onRead: data => {
+                if (!data) return
+                var parts = data.trim().split(' ')
+                if (parts.length >= 2) {
+                    batteryLevel = parseInt(parts[0]) || 0
+                    isCharging = parts[1].trim() === "Charging"
+                }
+            }
+        }
+    }
+
     // Active window title
     Process {
         id: windowProc
@@ -220,7 +240,7 @@ Item {
         calendarTimer.restart()
     }
 
-    // Slow timer for system stats
+    // Timer for system stats
     Timer {
         interval: 2000
         running: true
@@ -230,10 +250,11 @@ Item {
             memProc.running = true
             diskProc.running = true
             lightProc.running = true
+            batProc.running = true
         }
     }
 
-    // Fast timer for volume
+    // Timer for volume
     Timer {
         interval: 100
         running: true

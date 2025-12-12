@@ -1,4 +1,3 @@
-// components/SystemInfo.qml
 import QtQuick
 import Quickshell.Io
 import Quickshell.Hyprland
@@ -6,7 +5,11 @@ import Quickshell.Hyprland
 Item {
     id: systemInfo
 
-    // System info properties
+    // -------------------------
+    // 1. PROPERTIES
+    // -------------------------
+
+    // Stats
     property string kernelVersion: "Linux"
     property int cpuUsage: 0
     property int memUsage: 0
@@ -16,36 +19,63 @@ Item {
     property string activeWindow: "Window"
     property string currentLayout: "Tile"
 
-    // CPU tracking
+    // Battery & Power
+    property int batteryLevel: 0
+    property bool isCharging: false
+    property string powerMode: "Normal"
+
+    // Internal Calculations
     property var lastCpuIdle: 0
     property var lastCpuTotal: 0
 
-    // Battery properties
-    property int batteryLevel: 0
-    property bool isCharging: false
-
-    // OSD Logic
+    // UI Flags
     property bool osdVisible: false
     property bool calendarVisible: false
-    property bool isReady: false // Flag to prevent OSD on startup
+    property bool isReady: false // Prevent OSD on startup
 
-    // Timer to mark the system as "ready" after a short delay
-    Timer {
-        id: readyTimer
-        interval: 100 // ms, allows initial volume read to happen silently
-        repeat: false
-        onTriggered: isReady = true
+    // -------------------------
+    // 2. LIFECYCLE
+    // -------------------------
+
+    Component.onCompleted: {
+        // Start readiness timer
+        readyTimer.start()
+
+        // Initial fetch
+        kernelProc.running = true
+        cpuProc.running = true
+        memProc.running = true
+        diskProc.running = true
+        volProc.running = true
+        batProc.running = true
+        tlpProc.running = true
+        lightProc.running = true
+        windowProc.running = true
+        layoutProc.running = true
     }
 
-    // Hide OSD after 1.5 seconds
-    Timer {
-        id: osdTimer
-        interval: 1500
-        repeat: false
-        onTriggered: systemInfo.osdVisible = false
+    // -------------------------
+    // 3. FUNCTIONS
+    // -------------------------
+
+    function refreshBrightness() {
+        lightProc.running = true
     }
 
-    // Trigger OSD on volume change, but only after startup
+    function keepCalendarOpen() {
+        calendarTimer.stop()
+        calendarVisible = true
+    }
+
+    function closeCalendarDelayed() {
+        calendarTimer.restart()
+    }
+
+    // -------------------------
+    // 4. SIGNALS & HANDLERS
+    // -------------------------
+
+    // Trigger OSD on volume change (only after startup)
     onVolumeLevelChanged: {
         if (isReady) {
             systemInfo.osdVisible = true
@@ -53,39 +83,105 @@ Item {
         }
     }
 
-    function refreshBrightness() {
-        lightProc.running = true
+    // Event-based updates for window/layout (Instant response)
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            windowProc.running = true
+            layoutProc.running = true
+        }
     }
 
-    // This block runs once when the component has finished loading
-    Component.onCompleted: {
-        // Start the 'ready' timer. For the first 100ms, volume changes won't show the OSD.
-        readyTimer.start()
+    // -------------------------
+    // 5. TIMERS (Grouped)
+    // -------------------------
 
-        // --- Initial run of processes ---
-        kernelProc.running = true
-        cpuProc.running = true
-        memProc.running = true
-        diskProc.running = true
-        volProc.running = true
-        batProc.running = true
-        lightProc.running = true
-        windowProc.running = true
-        layoutProc.running = true
+    // System Ready Flag (One-shot)
+    Timer {
+        id: readyTimer
+        interval: 100
+        repeat: false
+        onTriggered: isReady = true
     }
 
-    // Kernel version
+    // Hide OSD (One-shot)
+    Timer {
+        id: osdTimer
+        interval: 1500
+        repeat: false
+        onTriggered: systemInfo.osdVisible = false
+    }
+
+    // Hide Calendar (One-shot)
+    Timer {
+        id: calendarTimer
+        interval: 100
+        repeat: false
+        onTriggered: systemInfo.calendarVisible = false
+    }
+
+    // Fast Interval (Volume) - 100ms
+    Timer {
+        interval: 100
+        running: true
+        repeat: true
+        onTriggered: volProc.running = true
+    }
+
+    // Medium Interval (Window/Layout Backup) - 200ms
+    Timer {
+        interval: 200
+        running: true
+        repeat: true
+        onTriggered: {
+            windowProc.running = true
+            layoutProc.running = true
+        }
+    }
+
+    // Slow Interval (Heavy Stats) - 2000ms
+    Timer {
+        interval: 2000
+        running: true
+        repeat: true
+        onTriggered: {
+            cpuProc.running = true
+            memProc.running = true
+            diskProc.running = true
+            lightProc.running = true
+            batProc.running = true
+            tlpProc.running = true
+        }
+    }
+
+    // -------------------------
+    // 6. PROCESSES
+    // -------------------------
+
+    // Kernel Version
     Process {
         id: kernelProc
         command: ["uname", "-r"]
         stdout: SplitParser {
+            onRead: data => { if (data) kernelVersion = data.trim() }
+        }
+    }
+
+    // TLP Power Mode
+    Process {
+        id: tlpProc
+        command: ["sh", "-c", "tlp-stat -s | grep 'Mode' | awk '{print $3}'"]
+        stdout: SplitParser {
             onRead: data => {
-                if (data) kernelVersion = data.trim()
+                if (data) {
+                    var mode = data.trim().toLowerCase()
+                    powerMode = (mode === "battery") ? "Eco" : "Normal"
+                }
             }
         }
     }
 
-    // CPU usage
+    // CPU Usage
     Process {
         id: cpuProc
         command: ["sh", "-c", "head -1 /proc/stat"]
@@ -117,7 +213,7 @@ Item {
         }
     }
 
-    // Memory usage
+    // Memory Usage
     Process {
         id: memProc
         command: ["sh", "-c", "free | grep Mem"]
@@ -132,7 +228,7 @@ Item {
         }
     }
 
-    // Disk usage
+    // Disk Usage
     Process {
         id: diskProc
         command: ["sh", "-c", "df / | tail -1"]
@@ -146,7 +242,7 @@ Item {
         }
     }
 
-    // Volume level (wpctl for PipeWire)
+    // Volume Level
     Process {
         id: volProc
         command: ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]
@@ -154,30 +250,27 @@ Item {
             onRead: data => {
                 if (!data) return
                 var match = data.match(/Volume:\s*([\d.]+)/)
-                if (match) {
-                    volumeLevel = Math.round(parseFloat(match[1]) * 100)
-                }
+                if (match) volumeLevel = Math.round(parseFloat(match[1]) * 100)
             }
         }
     }
 
-    // Brightness level
+    // Brightness
     Process {
         id: lightProc
         command: ["brightnessctl", "-m"]
         stdout: SplitParser {
             onRead: data => {
                 if (!data) return
-                // format: name,class,current,percentage,max
                 var parts = data.trim().split(',')
                 if (parts.length >= 4) {
-                    var percentStr = parts[3]
-                    brightnessVal = parseInt(percentStr.replace('%', '')) || 0
+                    brightnessVal = parseInt(parts[3].replace('%', '')) || 0
                 }
             }
         }
     }
 
+    // Battery
     Process {
         id: batProc
         command: ["sh", "-c", "paste -d ' ' /sys/class/power_supply/BAT0/capacity /sys/class/power_supply/BAT0/status"]
@@ -193,94 +286,23 @@ Item {
         }
     }
 
-    // Active window title
+    // Active Window
     Process {
         id: windowProc
         command: ["sh", "-c", "hyprctl activewindow -j | jq -r '.title // empty'"]
         stdout: SplitParser {
-            onRead: data => {
-                if (data && data.trim()) {
-                    activeWindow = data.trim()
-                } else {
-                    activeWindow = "Desktop"
-                }
-            }
+            onRead: data => activeWindow = (data && data.trim()) ? data.trim() : "Desktop"
         }
     }
 
-    // Current layout (Hyprland: dwindle/master/floating)
+    // Current Layout
     Process {
         id: layoutProc
         command: ["sh", "-c", "hyprctl activewindow -j | jq -r 'if .floating then \"Floating\" elif .fullscreen == 1 then \"Fullscreen\" else \"Tiled\" end'"]
         stdout: SplitParser {
             onRead: data => {
-                if (data && data.trim()) {
-                    currentLayout = data.trim()
-                }
+                if (data && data.trim()) currentLayout = data.trim()
             }
-        }
-    }
-
-    // Timer for display calendar popup
-    Timer {
-        id: calendarTimer
-        interval: 100 // ms
-        repeat: false
-        onTriggered: {
-            systemInfo.calendarVisible = false
-        }
-    }
-
-    function keepCalendarOpen() {
-        calendarTimer.stop()
-        calendarVisible = true
-    }
-
-    function closeCalendarDelayed() {
-        calendarTimer.restart()
-    }
-
-    // Timer for system stats
-    Timer {
-        interval: 2000
-        running: true
-        repeat: true
-        onTriggered: {
-            cpuProc.running = true
-            memProc.running = true
-            diskProc.running = true
-            lightProc.running = true
-            batProc.running = true
-        }
-    }
-
-    // Timer for volume
-    Timer {
-        interval: 100
-        running: true
-        repeat: true
-        onTriggered: {
-            volProc.running = true
-        }
-    }
-
-    // Event-based updates for window/layout (instant)
-    Connections {
-        target: Hyprland
-        function onRawEvent(event) {
-            windowProc.running = true
-            layoutProc.running = true
-        }
-    }
-
-    // Backup timer for window/layout (catches edge cases)
-    Timer {
-        interval: 200 // ms
-        running: true
-        repeat: true
-        onTriggered: {
-            windowProc.running = true
-            layoutProc.running = true
         }
     }
 }

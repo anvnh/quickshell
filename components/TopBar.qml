@@ -329,8 +329,8 @@ PanelWindow {
                     if (systemInfo) {
                         var level = systemInfo.batteryLevel || 0
                         var isCharging = systemInfo.isCharging || false
-
                         var icon = ""
+
                         if (isCharging) {
                             icon = "\uf0e7" // Lightning bolt 
                         } else {
@@ -361,6 +361,22 @@ PanelWindow {
                 Layout.rightMargin: 8
             }
 
+            // Power Mode (TLP)
+            Text {
+                text: {
+                    if (systemInfo) {
+                        // Leaf means Eco mode, Rocket means Performance mode
+                        return systemInfo.powerMode === "Eco" ? "\uf06c" : "\uf135" // Leaf or Rocket
+                    } else {
+                        return "\uf135"
+                    }
+                }
+                color: systemInfo && systemInfo.powerMode === "Eco" ? Theme.colGreen : Theme.colRed
+                font.pixelSize: Theme.fontSize
+                font.family: Theme.fontFamily
+                font.bold: true
+                Layout.rightMargin: 8
+            }
         }
     }
 }

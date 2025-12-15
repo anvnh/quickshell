@@ -181,14 +181,13 @@ PanelWindow {
                 Layout.leftMargin: 8
             }
 
-            // Kernel Version
+            // Uptime
             Text {
-                text: "\uf17c " + (systemInfo ? systemInfo.kernelVersion : "...")
-                color: Theme.colRed
+                text: "\uf017 " + (systemInfo ? systemInfo.uptime : "...")
+                color: Theme.colCyan
                 font.pixelSize: Theme.fontSize
                 font.family: Theme.fontFamily
                 font.bold: true
-                Layout.rightMargin: 8
             }
 
             // Separator
@@ -201,50 +200,65 @@ PanelWindow {
                 color: Theme.colMuted
             }
 
-            // CPU Usage
-            Text {
-                text: "\uf4bc " + (systemInfo ? systemInfo.cpuUsage : 0) + "%"
-                color: Theme.colYellow
-                font.pixelSize: Theme.fontSize
-                font.family: Theme.fontFamily
-                font.bold: true
-                Layout.rightMargin: 8
-            }
+            // CPU/Mem/Disk Group (Shows Kernel on Hover)
+            Item {
+                implicitWidth: statsRow.implicitWidth
+                implicitHeight: parent.height
 
-            Rectangle {
-                Layout.preferredWidth: 1
-                Layout.preferredHeight: 16
-                Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: 8
-                color: Theme.colMuted
-            }
+                MouseArea {
+                    id: statsMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                }
 
-            // Memory Usage
-            Text {
-                text: "\uf2db " + (systemInfo ? systemInfo.memUsage : 0) + "%"
-                color: Theme.colCyan
-                font.pixelSize: Theme.fontSize
-                font.family: Theme.fontFamily
-                font.bold: true
-                Layout.rightMargin: 8
-            }
+                RowLayout {
+                    id: statsRow
+                    anchors.centerIn: parent
+                    spacing: 1
+                    // Use opacity to hide so width remains constant
+                    opacity: statsMouseArea.containsMouse ? 0 : 1
 
-            Rectangle {
-                Layout.preferredWidth: 1
-                Layout.preferredHeight: 16
-                Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: 8
-                color: Theme.colMuted
-            }
+                    // CPU Usage
+                    Text {
+                        text: "\uf4bc " + (systemInfo ? systemInfo.cpuUsage : 0) + "%"
+                        color: Theme.colYellow
+                        font.pixelSize: Theme.fontSize
+                        font.family: Theme.fontFamily
+                        font.bold: true
+                        Layout.rightMargin: 8
+                    }
 
-            // Disk Usage
-            Text {
-                text: "\udb80\udeca " + (systemInfo ? systemInfo.diskUsage : 0) + "%"
-                color: Theme.colBlue
-                font.pixelSize: Theme.fontSize
-                font.family: Theme.fontFamily
-                font.bold: true
-                Layout.rightMargin: 8
+                    // Memory Usage
+                    Text {
+                        text: "\uf2db " + (systemInfo ? systemInfo.memUsage : 0) + "%"
+                        color: Theme.colCyan
+                        font.pixelSize: Theme.fontSize
+                        font.family: Theme.fontFamily
+                        font.bold: true
+                        Layout.rightMargin: 8
+                    }
+
+                    // Disk Usage
+                    Text {
+                        text: "\udb80\udeca " + (systemInfo ? systemInfo.diskUsage : 0) + "%"
+                        color: Theme.colBlue
+                        font.pixelSize: Theme.fontSize
+                        font.family: Theme.fontFamily
+                        font.bold: true
+                        Layout.rightMargin: 8
+                    }
+                }
+
+                // Kernel Version (Hover State)
+                Text {
+                    anchors.centerIn: parent
+                    visible: statsMouseArea.containsMouse
+                    text: "\uf17c " + (systemInfo ? systemInfo.kernelVersion : "...")
+                    color: Theme.colRed
+                    font.pixelSize: Theme.fontSize
+                    font.family: Theme.fontFamily
+                    font.bold: true
+                }
             }
 
             Rectangle {

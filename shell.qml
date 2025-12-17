@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
@@ -26,7 +27,6 @@ ShellRoot {
         model: Quickshell.screens
 
         Popup.VolumePopUp {
-            // Bind properties from our SystemInfo component
             visible: sysInfo.osdVisible
             volumeLevel: sysInfo.volumeLevel
         }

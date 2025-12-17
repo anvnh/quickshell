@@ -8,4 +8,4 @@ const colYellow = "#f9e2af"; // Yellow
 const colBlue = "#89b4fa";   // Blue
 
 const fontFamily = "JetBrainsMono Nerd Font";
-const fontSize = 13;
+const fontSize = 14;

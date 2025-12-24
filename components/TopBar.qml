@@ -67,12 +67,23 @@ PanelWindow {
                   MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
-                        onEntered: {
-                              if (topBar.systemInfo) {
-                                    topBar.systemInfo.keepCalendarOpen()
+
+                        Timer {
+                              id: hoverOpenTimer
+                              interval: 300
+                              repeat: false
+                              onTriggered: {
+                                    if (topBar.systemInfo) {
+                                          topBar.systemInfo.keepCalendarOpen()
+                                    }
                               }
                         }
+
+                        onEntered: {
+                              hoverOpenTimer.start()
+                        }
                         onExited: {
+                              hoverOpenTimer.stop()
                               if (topBar.systemInfo) {
                                     topBar.systemInfo.closeCalendarDelayed()
                               }

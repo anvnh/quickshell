@@ -1,5 +1,6 @@
 import Quickshell
 import QtQuick
+import QtQuick.Layouts
 import Quickshell.Wayland
 import "../../theme.js" as Theme
 import "../Calendar" as Calendar
@@ -9,8 +10,8 @@ PanelWindow {
     property var systemInfo: null
 
     screen: modelData
-    width: 300
-    height: 320
+    width: 420
+    height: 400
     color: "transparent"
 
     anchors {
@@ -37,8 +38,14 @@ PanelWindow {
             }
         }
 
-        Calendar.CalendarView {
+        ColumnLayout {
             anchors.centerIn: parent
+            spacing: 10
+
+            Calendar.CalendarView {
+                id: calendarView
+                Layout.alignment: Qt.AlignHCenter
+            }
         }
     }
 }

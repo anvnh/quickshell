@@ -340,6 +340,119 @@ PanelWindow {
                         }
                   }
 
+                  // Night Light
+
+                  Item {
+                        Layout.preferredHeight: parent.height
+                        Layout.preferredWidth: nightLightRow.implicitWidth
+                        Layout.rightMargin: 8
+                        RowLayout {
+                              id: nightLightRow
+                              anchors.centerIn: parent
+                              spacing: 4
+
+                              Text {
+
+                                    text: "\uf186"
+
+                                    color: (topBar.systemInfo && topBar.systemInfo.nightLightOn) ? Theme.colYellow : Theme.colFg
+
+                                    font.pixelSize: Theme.fontSize
+
+                                    font.family: Theme.fontFamily
+
+                                    font.bold: true
+
+                              }
+
+                              Text {
+
+                                    text: (topBar.systemInfo && topBar.systemInfo.nightLightOn) ? (topBar.systemInfo.nightLightTemp + "K") : "Off"
+                                    color: (topBar.systemInfo && topBar.systemInfo.nightLightOn) ? Theme.colYellow : Theme.colFg
+                                    font.pixelSize: Theme.fontSize
+                                    font.family: Theme.fontFamily
+                                    font.bold: true
+
+                              }
+
+                        }
+
+
+
+                        MouseArea {
+
+                              anchors.fill: parent
+
+                              cursorShape: Qt.PointingHandCursor
+
+                              onClicked: {
+
+                                    if (topBar.systemInfo && topBar.systemInfo.nightLightOn) {
+                                          Hyprland.dispatch("exec pkill hyprsunset")
+                                    } else {
+
+                                          // Set temp immediately
+                                          var temp = topBar.systemInfo ? topBar.systemInfo.nightLightTemp : 4500
+                                          Hyprland.dispatch("exec hyprsunset --temperature " + temp)
+
+                                    }
+
+                                    nightLightTimer.restart()
+
+                              }
+
+                              onWheel: (wheel) => {
+                                    if (!topBar.systemInfo) return
+                                    var step = 500
+                                    if (wheel.angleDelta.y > 0) {
+                                          topBar.systemInfo.nightLightTemp = Math.min(topBar.systemInfo.nightLightTemp + step, 10000)
+                                    } else {
+                                          topBar.systemInfo.nightLightTemp = Math.max(topBar.systemInfo.nightLightTemp - step, 1000)
+                                    }
+
+                                    if (topBar.systemInfo.nightLightOn) {
+                                          tempDebounceTimer.restart()
+                                    }
+                              }
+                        }
+
+
+                        Timer {
+
+                              id: tempDebounceTimer
+
+                              interval: 500
+
+                              repeat: false
+
+                              onTriggered: {
+
+                                    if (topBar.systemInfo && topBar.systemInfo.nightLightOn) {
+
+                                          var temp = topBar.systemInfo.nightLightTemp
+
+                                          Hyprland.dispatch("exec pkill hyprsunset; sleep 0.1; hyprsunset --temperature " + temp)
+
+                                    }
+
+                              }
+
+                        }
+
+
+
+                        Timer {
+
+                              id: nightLightTimer
+
+                              interval: 500
+
+                              onTriggered: if (topBar.systemInfo) topBar.systemInfo.refreshNightLight()
+
+                        }
+
+                  }
+
                   Rectangle {
                         Layout.preferredWidth: 1
                         Layout.preferredHeight: 16

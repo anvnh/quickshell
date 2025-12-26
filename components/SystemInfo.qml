@@ -16,6 +16,8 @@ Item {
       property int diskUsage: 0
       property int volumeLevel: 0
       property int brightnessVal: 0
+      property bool nightLightOn: false
+      property int nightLightTemp: 4500
       property string activeWindow: "Window"
       property string currentLayout: "Tile"
 
@@ -51,6 +53,7 @@ Item {
             batProc.running = true
             tlpProc.running = true
             lightProc.running = true
+            nightLightProc.running = true
             uptimeProc.running = true
             windowProc.running = true
             layoutProc.running = true
@@ -62,6 +65,10 @@ Item {
 
       function refreshBrightness() {
             lightProc.running = true
+      }
+
+      function refreshNightLight() {
+            nightLightProc.running = true
       }
 
       function keepCalendarOpen() {
@@ -151,6 +158,7 @@ Item {
                   memProc.running = true
                   diskProc.running = true
                   lightProc.running = true
+                  nightLightProc.running = true
                   batProc.running = true
                   tlpProc.running = true
                   uptimeProc.running = true
@@ -349,6 +357,17 @@ Item {
                         if (data && data.trim()) {
                               systemInfo.currentLayout = data.trim()
                         }
+                  }
+            }
+      }
+
+      // Night Light Status
+      Process {
+            id: nightLightProc
+            command: ["sh", "-c", "pgrep -x hyprsunset > /dev/null && echo 'true' || echo 'false'"]
+            stdout: SplitParser {
+                  onRead: data => {
+                        nightLightOn = (data.trim() === 'true')
                   }
             }
       }

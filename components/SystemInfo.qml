@@ -27,14 +27,27 @@ Item {
       property string powerMode: "Normal"
       property string uptime: "..."
 
+      // Polling (battery-aware)
+      property bool onBattery: !isCharging
+      property int fastPollInterval: onBattery ? 1000 : 250
+      property int windowPollInterval: onBattery ? 5000 : 1000
+      property int statsPollInterval: onBattery ? 15000 : 3000
+      property int miscPollInterval: onBattery ? 30000 : 5000
+      property int batteryPollInterval: onBattery ? 2000 : 1000
+      property int tlpPollInterval: onBattery ? 5000 : 1000
+      property int uptimePollInterval: onBattery ? 60000 : 1000
+      property int slowPollInterval: onBattery ? 60000 : 15000
+
       // Internal Calculations
       property var lastCpuIdle: 0
       property var lastCpuTotal: 0
+      property var lastIsCharging: false
 
       // UI Flags
       property bool osdVisible: false
       property bool calendarVisible: false
       property bool isReady: false // Prevent OSD on startup
+      property bool uptimeHover: false
 
       // -------------------------
       // 2. LIFECYCLE
@@ -69,6 +82,10 @@ Item {
 
       function refreshNightLight() {
             nightLightProc.running = true
+      }
+
+      function refreshUptime() {
+            uptimeProc.running = true
       }
 
       function keepCalendarOpen() {
@@ -129,17 +146,17 @@ Item {
             onTriggered: systemInfo.calendarVisible = false
       }
 
-      // Fast Interval (Volume) - 100ms
+      // Fast Interval (Volume)
       Timer {
-            interval: 100
+            interval: systemInfo.fastPollInterval
             running: true
             repeat: true
             onTriggered: volProc.running = true
       }
 
-      // Medium Interval (Window/Layout Backup) - 200ms
+      // Medium Interval (Window/Layout Backup)
       Timer {
-            interval: 200
+            interval: systemInfo.windowPollInterval
             running: true
             repeat: true
             onTriggered: {
@@ -148,21 +165,54 @@ Item {
             }
       }
 
-      // Slow Interval (Heavy Stats) - 2000ms
+      // Slow Interval (Usage Stats)
       Timer {
-            interval: 2000
+            interval: systemInfo.statsPollInterval
             running: true
             repeat: true
             onTriggered: {
                   cpuProc.running = true
                   memProc.running = true
                   diskProc.running = true
+            }
+      }
+
+      // Slow Interval (Battery/Light)
+      Timer {
+            interval: systemInfo.miscPollInterval
+            running: true
+            repeat: true
+            onTriggered: {
                   lightProc.running = true
                   nightLightProc.running = true
-                  batProc.running = true
-                  tlpProc.running = true
+            }
+      }
+
+      // Battery Status (Fast)
+      Timer {
+            interval: systemInfo.batteryPollInterval
+            running: true
+            repeat: true
+            onTriggered: batProc.running = true
+      }
+
+      // Uptime
+      Timer {
+            interval: systemInfo.uptimePollInterval
+            running: true
+            repeat: true
+            onTriggered: {
+                  if (systemInfo.onBattery && !systemInfo.uptimeHover) return
                   uptimeProc.running = true
             }
+      }
+
+      // Power Mode (TLP)
+      Timer {
+            interval: systemInfo.tlpPollInterval
+            running: true
+            repeat: true
+            onTriggered: tlpProc.running = true
       }
 
       // -------------------------
@@ -315,6 +365,10 @@ Item {
                         if (parts.length >= 2) {
                               batteryLevel = parseInt(parts[0]) || 0
                               isCharging = parts[1].trim() === "Charging"
+                              if (lastIsCharging !== isCharging) {
+                                    lastIsCharging = isCharging
+                                    tlpProc.running = true
+                              }
                         }
                   }
             }

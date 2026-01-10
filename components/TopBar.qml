@@ -59,7 +59,7 @@ PanelWindow {
                   font.bold: true
                   Layout.rightMargin: 8
                   Timer {
-                        interval: 1000
+                        interval: (topBar.systemInfo && !topBar.systemInfo.isCharging) ? 30000 : 1000
                         running: true
                         repeat: true
                         onTriggered: clockText.text = Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
@@ -199,6 +199,17 @@ PanelWindow {
                         font.pixelSize: Theme.fontSize
                         font.family: Theme.fontFamily
                         font.bold: true
+                        MouseArea {
+                              anchors.fill: parent
+                              hoverEnabled: true
+                              onEntered: {
+                                    if (topBar.systemInfo) {
+                                          topBar.systemInfo.uptimeHover = true
+                                          topBar.systemInfo.refreshUptime()
+                                    }
+                              }
+                              onExited: if (topBar.systemInfo) topBar.systemInfo.uptimeHover = false
+                        }
                   }
 
                   // Separator
@@ -216,18 +227,11 @@ PanelWindow {
                         implicitWidth: statsRow.implicitWidth
                         implicitHeight: parent.height
 
-                        MouseArea {
-                              id: statsMouseArea
-                              anchors.fill: parent
-                              hoverEnabled: true
-                        }
-
                         RowLayout {
                               id: statsRow
                               anchors.centerIn: parent
                               spacing: 1
-                              // Use opacity to hide so width remains constant
-                              opacity: statsMouseArea.containsMouse ? 0 : 1
+                              opacity: 1
 
                               // CPU Usage
                               Text {
@@ -260,16 +264,6 @@ PanelWindow {
                               }
                         }
 
-                        // Kernel Version (Hover State)
-                        Text {
-                              anchors.centerIn: parent
-                              visible: statsMouseArea.containsMouse
-                              text: "\uf17c " + (topBar.systemInfo ? topBar.systemInfo.kernelVersion : "...")
-                              color: Theme.colRed
-                              font.pixelSize: Theme.fontSize
-                              font.family: Theme.fontFamily
-                              font.bold: true
-                        }
                   }
 
                   Rectangle {
@@ -377,28 +371,18 @@ PanelWindow {
 
                         }
 
-
-
                         MouseArea {
-
                               anchors.fill: parent
-
                               cursorShape: Qt.PointingHandCursor
-
                               onClicked: {
-
                                     if (topBar.systemInfo && topBar.systemInfo.nightLightOn) {
                                           Hyprland.dispatch("exec pkill hyprsunset")
                                     } else {
-
                                           // Set temp immediately
                                           var temp = topBar.systemInfo ? topBar.systemInfo.nightLightTemp : 4500
                                           Hyprland.dispatch("exec hyprsunset --temperature " + temp)
-
                                     }
-
                                     nightLightTimer.restart()
-
                               }
 
                               onWheel: (wheel) => {
@@ -409,46 +393,31 @@ PanelWindow {
                                     } else {
                                           topBar.systemInfo.nightLightTemp = Math.max(topBar.systemInfo.nightLightTemp - step, 1000)
                                     }
-
                                     if (topBar.systemInfo.nightLightOn) {
                                           tempDebounceTimer.restart()
                                     }
                               }
                         }
 
-
                         Timer {
 
                               id: tempDebounceTimer
-
                               interval: 500
-
                               repeat: false
-
                               onTriggered: {
-
                                     if (topBar.systemInfo && topBar.systemInfo.nightLightOn) {
-
                                           var temp = topBar.systemInfo.nightLightTemp
-
                                           Hyprland.dispatch("exec pkill hyprsunset; sleep 0.1; hyprsunset --temperature " + temp)
-
                                     }
-
                               }
-
                         }
 
 
 
                         Timer {
-
                               id: nightLightTimer
-
                               interval: 500
-
                               onTriggered: if (topBar.systemInfo) topBar.systemInfo.refreshNightLight()
-
                         }
 
                   }

@@ -18,6 +18,12 @@ Item {
       property int brightnessVal: 0
       property bool nightLightOn: false
       property int nightLightTemp: 4500
+      property string networkText: "Disconnected \u26A0"
+      property bool wifiEnabled: false
+      property var wifiList: []
+      property bool wifiListBusy: false
+      property bool wifiConnecting: false
+      property string wifiStatusText: ""
       property string activeWindow: "Window"
       property string currentLayout: "Tile"
 
@@ -29,14 +35,15 @@ Item {
 
       // Polling (battery-aware)
       property bool onBattery: !isCharging
-      property int fastPollInterval: onBattery ? 1000 : 250
-      property int windowPollInterval: onBattery ? 5000 : 1000
-      property int statsPollInterval: onBattery ? 15000 : 3000
-      property int miscPollInterval: onBattery ? 30000 : 5000
-      property int batteryPollInterval: onBattery ? 2000 : 1000
-      property int tlpPollInterval: onBattery ? 5000 : 1000
-      property int uptimePollInterval: onBattery ? 60000 : 1000
-      property int slowPollInterval: onBattery ? 60000 : 15000
+      property int fastPollInterval: onBattery ? 250 : 1000
+      property int windowPollInterval: onBattery ? 1000 : 5000
+      property int statsPollInterval: onBattery ? 3000 : 15000
+      property int miscPollInterval: onBattery ? 5000 : 30000
+      property int batteryPollInterval: onBattery ? 1000 : 2000
+      property int tlpPollInterval: onBattery ? 1000 : 5000
+      property int uptimePollInterval: onBattery ? 1000 : 60000
+      property int slowPollInterval: onBattery ? 15000 : 60000
+      property int networkPollInterval: onBattery ? 300000 : 600000
 
       // Internal Calculations
       property var lastCpuIdle: 0
@@ -46,8 +53,12 @@ Item {
       // UI Flags
       property bool osdVisible: false
       property bool calendarVisible: false
+      property bool networkPopupVisible: false
       property bool isReady: false // Prevent OSD on startup
       property bool uptimeHover: false
+
+      // Internal Wi-Fi Parsing
+      property var wifiListBuffer: []
 
       // -------------------------
       // 2. LIFECYCLE
@@ -70,6 +81,8 @@ Item {
             uptimeProc.running = true
             windowProc.running = true
             layoutProc.running = true
+            networkProc.running = true
+            networkMonitorProc.running = true
       }
 
       // -------------------------
@@ -86,6 +99,62 @@ Item {
 
       function refreshUptime() {
             uptimeProc.running = true
+      }
+
+      function refreshNetwork() {
+            networkProc.running = true
+      }
+
+      function refreshWifiList() {
+            if (wifiListBusy) return
+            wifiStatusText = ""
+            wifiListBuffer = []
+            wifiListBusy = true
+            wifiListProc.running = true
+      }
+
+      function connectWifi(ssid, password) {
+            if (!ssid || wifiConnecting) return
+            wifiStatusText = "Connecting..."
+            var args = ["nmcli", "dev", "wifi", "connect", ssid]
+            if (password && password.length > 0) {
+                  args.push("password")
+                  args.push(password)
+            }
+            wifiConnectProc.exec(args)
+      }
+
+      function splitNmcliFields(line) {
+            var fields = []
+            var current = ""
+            var escape = false
+            for (var i = 0; i < line.length; i++) {
+                  var ch = line[i]
+                  if (escape) {
+                        current += ch
+                        escape = false
+                        continue
+                  }
+                  if (ch === "\\") {
+                        escape = true
+                        continue
+                  }
+                  if (ch === ":") {
+                        fields.push(current)
+                        current = ""
+                        continue
+                  }
+                  current += ch
+            }
+            if (escape) current += "\\"
+            fields.push(current)
+            return fields
+      }
+
+      function isOpenSecurity(security) {
+            if (!security) return true
+            var value = security.toLowerCase()
+            return value === "--" || value === "open" || value === "none"
       }
 
       function keepCalendarOpen() {
@@ -185,6 +254,27 @@ Item {
             onTriggered: {
                   lightProc.running = true
                   nightLightProc.running = true
+            }
+      }
+
+      // Network Status
+      Timer {
+            interval: systemInfo.networkPollInterval
+            running: true
+            repeat: true
+            onTriggered: networkProc.running = true
+      }
+
+      // Network Change Debounce
+      Timer {
+            id: networkChangeDebounce
+            interval: 300
+            repeat: false
+            onTriggered: {
+                  refreshNetwork()
+                  if (systemInfo.networkPopupVisible) {
+                        refreshWifiList()
+                  }
             }
       }
 
@@ -423,6 +513,146 @@ Item {
                   onRead: data => {
                         nightLightOn = (data.trim() === 'true')
                   }
+            }
+      }
+
+      // Network Status (Wi-Fi/Ethernet)
+      Process {
+            id: networkProc
+            command: [
+                  "sh",
+                  "-c",
+                  "if command -v nmcli >/dev/null 2>&1; then " +
+                  "radio=$(nmcli -t -f WIFI g 2>/dev/null | head -n1); " +
+                  "if [ -z \"$radio\" ]; then radio=unknown; fi; " +
+                  "con=$(nmcli -t -f DEVICE,TYPE,STATE dev | awk -F: '$3==\"connected\"{print $0; exit}'); " +
+                  "if [ -n \"$con\" ]; then " +
+                  "dev=$(echo \"$con\" | cut -d: -f1); " +
+                  "type=$(echo \"$con\" | cut -d: -f2); " +
+                  "if [ \"$type\" = \"wifi\" ]; then " +
+                  "wifi=$(nmcli -t -f ACTIVE,SSID,SIGNAL dev wifi | awk -F: '$1==\"yes\"{print $0; exit}'); " +
+                  "ssid=$(echo \"$wifi\" | cut -d: -f2); " +
+                  "sig=$(echo \"$wifi\" | cut -d: -f3); " +
+                  "printf '%s|wifi|%s|%s|%s' \"$radio\" \"$dev\" \"$ssid\" \"$sig\"; " +
+                  "elif [ \"$type\" = \"ethernet\" ]; then " +
+                  "printf '%s|ethernet|%s' \"$radio\" \"$dev\"; " +
+                  "else " +
+                  "printf '%s|%s|%s' \"$radio\" \"$type\" \"$dev\"; " +
+                  "fi; " +
+                  "else " +
+                  "printf '%s|disconnected' \"$radio\"; " +
+                  "fi; " +
+                  "else " +
+                  "printf 'unknown|disconnected'; " +
+                  "fi"
+            ]
+            stdout: SplitParser {
+                  onRead: data => {
+                        if (!data) return
+                        var parts = data.trim().split("|")
+                        var radio = parts[0] || "unknown"
+                        wifiEnabled = (radio === "enabled")
+                        if (parts[1] === "wifi") {
+                              var ssid = parts[3] || "Wi-Fi"
+                              var sig = parts[4] || "0"
+                              networkText = "\uf1eb " + ssid + " (" + sig + "%)"
+                        } else if (parts[1] === "ethernet") {
+                              var ifname = parts[2] || "eth"
+                              networkText = "\uf0c1 " + ifname
+                        } else if (parts[1] === "disconnected") {
+                              networkText = wifiEnabled ? "Disconnected \u26A0" : "\uf1eb Off"
+                        } else {
+                              var ifnameOther = parts[2] || "net"
+                              networkText = ifnameOther
+                        }
+                  }
+            }
+      }
+
+      // Network Change Monitor (event-driven refresh)
+      Process {
+            id: networkMonitorProc
+            command: ["nmcli", "monitor"]
+            stdout: SplitParser {
+                  onRead: data => {
+                        if (!data) return
+                        networkChangeDebounce.restart()
+                  }
+            }
+            onExited: {
+                  networkMonitorRestart.restart()
+            }
+      }
+
+      Timer {
+            id: networkMonitorRestart
+            interval: 2000
+            repeat: false
+            onTriggered: {
+                  if (!networkMonitorProc.running) {
+                        networkMonitorProc.running = true
+                  }
+            }
+      }
+
+      // Wi-Fi List
+      Process {
+            id: wifiListProc
+            command: ["nmcli", "-t", "-e", "yes", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "dev", "wifi", "list"]
+            stdout: SplitParser {
+                  onRead: data => {
+                        if (!data) return
+                        var line = data.trim()
+                        if (!line) return
+                        var fields = splitNmcliFields(line)
+                        if (fields.length < 4) return
+                        var inUse = fields[0] === "*"
+                        var ssid = fields[1]
+                        if (!ssid) return
+                        var signal = parseInt(fields[2]) || 0
+                        var security = fields[3] || "--"
+                        wifiListBuffer.push({
+                              ssid: ssid,
+                              signal: signal,
+                              security: security,
+                              inUse: inUse,
+                              open: isOpenSecurity(security)
+                        })
+                  }
+            }
+            onExited: {
+                  wifiListBusy = false
+                  wifiList = wifiListBuffer.slice().sort(function(a, b) {
+                        if (a.inUse !== b.inUse) return a.inUse ? -1 : 1
+                        return b.signal - a.signal
+                  })
+                  wifiListBuffer = []
+            }
+      }
+
+      // Wi-Fi Connect
+      Process {
+            id: wifiConnectProc
+            stdout: SplitParser {
+                  onRead: data => {
+                        if (data) wifiStatusText = data.trim()
+                  }
+            }
+            stderr: SplitParser {
+                  onRead: data => {
+                        if (data) wifiStatusText = data.trim()
+                  }
+            }
+            onStarted: wifiConnecting = true
+            onExited: {
+                  wifiConnecting = false
+                  if (exitCode === 0) {
+                        wifiStatusText = ""
+                  } else if (!wifiStatusText) {
+                        wifiStatusText = "Connect failed"
+                  }
+                  refreshNetwork()
+                  refreshWifiList()
             }
       }
 }

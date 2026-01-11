@@ -59,7 +59,7 @@ PanelWindow {
                   font.bold: true
                   Layout.rightMargin: 8
                   Timer {
-                        interval: (topBar.systemInfo && !topBar.systemInfo.isCharging) ? 30000 : 1000
+                        interval: (topBar.systemInfo && topBar.systemInfo.onBattery) ? 1000 : 30000
                         running: true
                         repeat: true
                         onTriggered: clockText.text = Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
@@ -218,6 +218,37 @@ PanelWindow {
                         Layout.preferredHeight: 16
                         Layout.alignment: Qt.AlignVCenter
                         Layout.leftMargin: 8
+                        Layout.rightMargin: 8
+                        color: Theme.colMuted
+                  }
+
+                  // Network
+                  Text {
+                        text: topBar.systemInfo ? topBar.systemInfo.networkText : "\uf1eb ..."
+                        color: Theme.colBlue
+                        font.pixelSize: Theme.fontSize
+                        font.family: Theme.fontFamily
+                        font.bold: true
+                        Layout.rightMargin: 8
+                        MouseArea {
+                              anchors.fill: parent
+                              cursorShape: Qt.PointingHandCursor
+                              onClicked: {
+                                    if (!topBar.systemInfo) return
+                                    topBar.systemInfo.networkPopupVisible = !topBar.systemInfo.networkPopupVisible
+                                    if (topBar.systemInfo.networkPopupVisible) {
+                                          topBar.systemInfo.refreshNetwork()
+                                          topBar.systemInfo.refreshWifiList()
+                                    }
+                              }
+                        }
+                  }
+
+                  // Separator
+                  Rectangle {
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: 16
+                        Layout.alignment: Qt.AlignVCenter
                         Layout.rightMargin: 8
                         color: Theme.colMuted
                   }

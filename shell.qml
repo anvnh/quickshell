@@ -41,4 +41,15 @@ ShellRoot {
             systemInfo: sysInfo
         }
     }
+
+    // Network Popup
+    Variants {
+        model: Quickshell.screens
+
+        Popup.NetworkPopup {
+            visible: sysInfo.networkPopupVisible
+            systemInfo: sysInfo
+        }
+    }
+
 }

@@ -20,8 +20,8 @@ PanelWindow {
         right: true
     }
     margins {
-        top: 140
-        right: 20
+        top: 40
+        right: 430
     }
 
     // Overlay mode
@@ -30,6 +30,9 @@ PanelWindow {
 
     onVisibleChanged: {
         if (!visible || !systemInfo) return
+        popupBox.scale = 0.82
+        popupBox.opacity = 0
+        popupReveal.start()
         systemInfo.refreshNetwork()
         systemInfo.refreshWifiList()
     }
@@ -57,6 +60,7 @@ PanelWindow {
         color: Theme.colBg
         border.color: Theme.colBlue
         border.width: 2
+        transformOrigin: Item.TopRight
 
         ColumnLayout {
             anchors.fill: parent
@@ -86,7 +90,7 @@ PanelWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "Scan"
-                        color: Theme.colBg
+                        color: Theme.colText
                         font { pixelSize: Theme.fontSize - 2; family: Theme.fontFamily; bold: true }
                     }
 
@@ -129,7 +133,7 @@ PanelWindow {
                     Text {
                         anchors.centerIn: parent
                         text: systemInfo && systemInfo.wifiEnabled ? "ON" : "OFF"
-                        color: Theme.colBg
+                        color: Theme.colText
                         font { pixelSize: Theme.fontSize; family: Theme.fontFamily; bold: true }
                     }
 
@@ -230,6 +234,26 @@ PanelWindow {
             }
         }
 
+    }
+
+    ParallelAnimation {
+        id: popupReveal
+        NumberAnimation {
+            target: popupBox
+            property: "scale"
+            from: 0.82
+            to: 1
+            duration: 220
+            easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+            target: popupBox
+            property: "opacity"
+            from: 0
+            to: 1
+            duration: 180
+            easing.type: Easing.OutQuad
+        }
     }
 
     Timer {

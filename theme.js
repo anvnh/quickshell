@@ -6,6 +6,7 @@ const colPurple = "#cba6f7"; // Mauve
 const colRed = "#f38ba8";    // Red
 const colYellow = "#f9e2af"; // Yellow
 const colBlue = "#89b4fa";   // Blue
+const colText = "#ffffff";
 
 const fontFamily = "JetBrainsMono Nerd Font";
 const fontSize = 14;

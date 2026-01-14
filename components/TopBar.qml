@@ -30,6 +30,7 @@ PanelWindow {
       implicitHeight: 30
       color: Theme.colBg
 
+
       anchors {
             top: true
             left: true
@@ -42,6 +43,7 @@ PanelWindow {
             left: 0
             right: 0
       }
+
 
       Rectangle {
             id: backgroundRect
@@ -59,7 +61,7 @@ PanelWindow {
                   font.bold: true
                   Layout.rightMargin: 8
                   Timer {
-                        interval: (topBar.systemInfo && topBar.systemInfo.onBattery) ? 1000 : 30000
+                        interval: 60000
                         running: true
                         repeat: true
                         onTriggered: clockText.text = Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
@@ -190,26 +192,6 @@ PanelWindow {
                         elide: Text.ElideRight
                         maximumLineCount: 1
                         Layout.leftMargin: 8
-                  }
-
-                  // Uptime
-                  Text {
-                        text: "\uf017 " + (topBar.systemInfo ? topBar.systemInfo.uptime : "...")
-                        color: Theme.colCyan
-                        font.pixelSize: Theme.fontSize
-                        font.family: Theme.fontFamily
-                        font.bold: true
-                        MouseArea {
-                              anchors.fill: parent
-                              hoverEnabled: true
-                              onEntered: {
-                                    if (topBar.systemInfo) {
-                                          topBar.systemInfo.uptimeHover = true
-                                          topBar.systemInfo.refreshUptime()
-                                    }
-                              }
-                              onExited: if (topBar.systemInfo) topBar.systemInfo.uptimeHover = false
-                        }
                   }
 
                   // Separator
@@ -363,6 +345,49 @@ PanelWindow {
                               interval: 100
                               onTriggered: if (topBar.systemInfo) topBar.systemInfo.refreshBrightness()
                         }
+                  }
+
+                  Rectangle {
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: 16
+                        Layout.alignment: Qt.AlignVCenter
+                        Layout.rightMargin: 8
+                        color: Theme.colMuted
+                  }
+
+                  // Color Picker
+                  Item {
+                        Layout.preferredHeight: parent.height
+                        Layout.preferredWidth: colorPickerRow.implicitWidth
+                        Layout.rightMargin: 8
+
+                        RowLayout {
+                              id: colorPickerRow
+                              anchors.centerIn: parent
+                              spacing: 0
+
+                              Text {
+                                    text: "\uf01f"
+                                    color: Theme.colFg
+                                    font.pixelSize: Theme.fontSize
+                                    font.family: Theme.fontFamily
+                                    font.bold: true
+                              }
+                        }
+
+                        MouseArea {
+                              anchors.fill: parent
+                              cursorShape: Qt.PointingHandCursor
+                              onClicked: Hyprland.dispatch("exec hyprpicker -a")
+                        }
+                  }
+
+                  Rectangle {
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: 16
+                        Layout.alignment: Qt.AlignVCenter
+                        Layout.rightMargin: 8
+                        color: Theme.colMuted
                   }
 
                   // Night Light

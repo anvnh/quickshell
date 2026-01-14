@@ -5,12 +5,7 @@ import Quickshell.Hyprland
 Item {
       id: systemInfo
 
-      // -------------------------
-      // 1. PROPERTIES
-      // -------------------------
-
       // Stats
-      property string kernelVersion: "Linux"
       property int cpuUsage: 0
       property int memUsage: 0
       property int diskUsage: 0
@@ -18,7 +13,8 @@ Item {
       property int brightnessVal: 0
       property bool nightLightOn: false
       property int nightLightTemp: 4500
-      property string networkText: "Disconnected \u26A0"
+      // property string networkText: "Disconnected \u26A0"
+      property string networkText: "Loading ..."
       property bool wifiEnabled: false
       property var wifiList: []
       property bool wifiListBusy: false
@@ -31,19 +27,6 @@ Item {
       property int batteryLevel: 0
       property bool isCharging: false
       property string powerMode: "Normal"
-      property string uptime: "..."
-
-      // Polling (battery-aware)
-      property bool onBattery: !isCharging
-      property int fastPollInterval: onBattery ? 250 : 1000
-      property int windowPollInterval: onBattery ? 1000 : 5000
-      property int statsPollInterval: onBattery ? 3000 : 15000
-      property int miscPollInterval: onBattery ? 5000 : 30000
-      property int batteryPollInterval: onBattery ? 1000 : 2000
-      property int tlpPollInterval: onBattery ? 1000 : 5000
-      property int uptimePollInterval: onBattery ? 1000 : 60000
-      property int slowPollInterval: onBattery ? 15000 : 60000
-      property int networkPollInterval: onBattery ? 300000 : 600000
 
       // Internal Calculations
       property var lastCpuIdle: 0
@@ -55,13 +38,12 @@ Item {
       property bool calendarVisible: false
       property bool networkPopupVisible: false
       property bool isReady: false // Prevent OSD on startup
-      property bool uptimeHover: false
 
       // Internal Wi-Fi Parsing
       property var wifiListBuffer: []
 
       // -------------------------
-      // 2. LIFECYCLE
+      // LIFECYCLE
       // -------------------------
 
       Component.onCompleted: {
@@ -69,7 +51,6 @@ Item {
             readyTimer.start()
 
             // Initial fetch
-            kernelProc.running = true
             cpuProc.running = true
             memProc.running = true
             diskProc.running = true
@@ -78,7 +59,6 @@ Item {
             tlpProc.running = true
             lightProc.running = true
             nightLightProc.running = true
-            uptimeProc.running = true
             windowProc.running = true
             layoutProc.running = true
             networkProc.running = true
@@ -86,20 +66,16 @@ Item {
       }
 
       // -------------------------
-      // 3. FUNCTIONS
+      // FUNCTIONS
       // -------------------------
 
-      function refreshBrightness() {
-            lightProc.running = true
-      }
-
-      function refreshNightLight() {
-            nightLightProc.running = true
-      }
-
-      function refreshUptime() {
-            uptimeProc.running = true
-      }
+      // function refreshBrightness() {
+      //       lightProc.running = true
+      // }
+      //
+      // function refreshNightLight() {
+      //       nightLightProc.running = true
+      // }
 
       function refreshNetwork() {
             networkProc.running = true
@@ -167,7 +143,7 @@ Item {
       }
 
       // -------------------------
-      // 4. SIGNALS & HANDLERS
+      // SIGNALS & HANDLERS
       // -------------------------
 
       // Trigger OSD on volume change (only after startup)
@@ -188,158 +164,8 @@ Item {
       }
 
       // -------------------------
-      // 5. TIMERS (Grouped)
+      // PROCESSES
       // -------------------------
-
-      // System Ready Flag (One-shot)
-      Timer {
-            id: readyTimer
-            interval: 100
-            repeat: false
-            onTriggered: isReady = true
-      }
-
-      // Hide OSD (One-shot)
-      Timer {
-            id: osdTimer
-            interval: 1500
-            repeat: false
-            onTriggered: systemInfo.osdVisible = false
-      }
-
-      // Hide Calendar (One-shot)
-      Timer {
-            id: calendarTimer
-            interval: 100
-            repeat: false
-            onTriggered: systemInfo.calendarVisible = false
-      }
-
-      // Fast Interval (Volume)
-      Timer {
-            interval: systemInfo.fastPollInterval
-            running: true
-            repeat: true
-            onTriggered: volProc.running = true
-      }
-
-      // Medium Interval (Window/Layout Backup)
-      Timer {
-            interval: systemInfo.windowPollInterval
-            running: true
-            repeat: true
-            onTriggered: {
-                  windowProc.running = true
-                  layoutProc.running = true
-            }
-      }
-
-      // Slow Interval (Usage Stats)
-      Timer {
-            interval: systemInfo.statsPollInterval
-            running: true
-            repeat: true
-            onTriggered: {
-                  cpuProc.running = true
-                  memProc.running = true
-                  diskProc.running = true
-            }
-      }
-
-      // Slow Interval (Battery/Light)
-      Timer {
-            interval: systemInfo.miscPollInterval
-            running: true
-            repeat: true
-            onTriggered: {
-                  lightProc.running = true
-                  nightLightProc.running = true
-            }
-      }
-
-      // Network Status
-      Timer {
-            interval: systemInfo.networkPollInterval
-            running: true
-            repeat: true
-            onTriggered: networkProc.running = true
-      }
-
-      // Network Change Debounce
-      Timer {
-            id: networkChangeDebounce
-            interval: 300
-            repeat: false
-            onTriggered: {
-                  refreshNetwork()
-                  if (systemInfo.networkPopupVisible) {
-                        refreshWifiList()
-                  }
-            }
-      }
-
-      // Battery Status (Fast)
-      Timer {
-            interval: systemInfo.batteryPollInterval
-            running: true
-            repeat: true
-            onTriggered: batProc.running = true
-      }
-
-      // Uptime
-      Timer {
-            interval: systemInfo.uptimePollInterval
-            running: true
-            repeat: true
-            onTriggered: {
-                  if (systemInfo.onBattery && !systemInfo.uptimeHover) return
-                  uptimeProc.running = true
-            }
-      }
-
-      // Power Mode (TLP)
-      Timer {
-            interval: systemInfo.tlpPollInterval
-            running: true
-            repeat: true
-            onTriggered: tlpProc.running = true
-      }
-
-      // -------------------------
-      // 6. PROCESSES
-      // -------------------------
-
-      // Kernel Version
-      Process {
-            id: kernelProc
-            command: ["uname", "-r"]
-            stdout: SplitParser {
-                  onRead: data => { if (data) kernelVersion = data.trim() }
-            }
-      }
-
-      // Uptime
-      Process {
-            id: uptimeProc
-            command: ["cat", "/proc/uptime"]
-            stdout: SplitParser {
-                  onRead: data => {
-                        if (!data) return
-                        var parts = data.trim().split(/\s+/)
-                        var totalSeconds = parseInt(parts[0]) || 0
-
-                        var days = Math.floor(totalSeconds / 86400)
-                        var hours = Math.floor((totalSeconds % 86400) / 3600)
-                        var minutes = Math.floor((totalSeconds % 3600) / 60)
-
-                        var uptimeStr = ""
-                        if (days > 0) uptimeStr += days + "d "
-                        uptimeStr += hours + "h " + minutes + "m"
-
-                        uptime = uptimeStr
-                  }
-            }
-      }
 
       // TLP Power Mode
       Process {
@@ -654,5 +480,100 @@ Item {
                   refreshNetwork()
                   refreshWifiList()
             }
+      }
+
+      // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+      Timer {
+            id: readyTimer
+            interval: 100
+            repeat: false
+            onTriggered: isReady = true
+      }
+
+      Timer {
+            id: osdTimer
+            interval: 500
+            repeat: false
+            onTriggered: systemInfo.osdVisible = false
+      }
+
+      Timer {
+            id: calendarTimer
+            interval: 100
+            repeat: false
+            onTriggered: systemInfo.calendarVisible = false
+      }
+
+      // Fast Interval
+      Timer {
+            interval: 100
+            running: true
+            repeat: true
+            onTriggered: {
+                  volProc.running = true
+                  lightProc.running = true
+            }
+      }
+
+      // Medium Interval
+      Timer {
+            interval: 2000
+            running: true
+            repeat: true
+            onTriggered: {
+                  windowProc.running = true
+                  layoutProc.running = true
+            }
+      }
+
+      // Slow Interval
+      Timer {
+            interval: 60000
+            running: true
+            repeat: true
+            onTriggered: {
+                  cpuProc.running = true
+                  memProc.running = true
+                  diskProc.running = true
+                  nightLightProc.running = true
+            }
+      }
+
+      // Network Status
+      Timer {
+            interval: 5000
+            running: true
+            repeat: true
+            onTriggered: networkProc.running = true
+      }
+
+      // Network Change Debounce
+      Timer {
+            id: networkChangeDebounce
+            interval: 300
+            repeat: false
+            onTriggered: {
+                  refreshNetwork()
+                  if (systemInfo.networkPopupVisible) {
+                        refreshWifiList()
+                  }
+            }
+      }
+
+      // Battery Status
+      Timer {
+            interval: 30000
+            running: true
+            repeat: true
+            onTriggered: batProc.running = true
+      }
+
+      // Power Mode (TLP)
+      Timer {
+            interval: 100
+            running: true
+            repeat: true
+            onTriggered: tlpProc.running = true
       }
 }
